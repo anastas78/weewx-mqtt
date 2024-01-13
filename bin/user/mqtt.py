@@ -191,6 +191,7 @@ UNIT_REDUCTIONS = {
     'degree_F': 'F',
     'degree_C': 'C',
     'inch': 'in',
+    'inch': 'in',
     'mile_per_hour': 'mph',
     'mile_per_hour2': 'mph',
     'km_per_hour': 'kph',
@@ -211,7 +212,8 @@ UNIT_REDUCTIONS = {
 HA_SENSOR_TYPE = {
     'degree_F': 'temperature',
     'degree_C': 'temperature',
-    'mbar': 'pressure',	
+    'mbar': 'atmospheric_pressure',
+    'inHg': 'atmospheric_pressure',
     'inch': 'precipitation',
     'cm': 'precipitation',
     'mm': 'precipitation',
@@ -223,6 +225,7 @@ HA_SENSOR_TYPE = {
     'mile_per_hour': 'wind_speed',
     'mile_per_hour2': 'wind_speed',
     'mm_per_hour': 'precipitation_intensity',
+    'inch_per_hour': 'precipitation_intensity',
     'cm_per_hour': 'precipitation_intensity',
     'cm_per_hour2': 'precipitation_intensity',   
     'km_per_hour': 'precipitation_intensity',
@@ -253,6 +256,7 @@ HA_SENSOR_UNIT = {
     'hour': 'h',
     'mile_per_hour': 'mph',
     'mile_per_hour2': 'mph',
+    'inch_per_hour': 'in/h',
     'mm_per_hour': 'mm/h',
     'mm_per_hour2': 'mm/h',
     'cm_per_hour': 'cm/h',
@@ -651,12 +655,16 @@ class MQTTThread(weewx.restx.RESTThread):
                 conf['state_topic'] = self.topic + '/loop'
                 if sensor[key]['type'] == 'timestamp':
                     conf['value_template'] = "{{ value_json." + key + " | int | as_datetime }}"
+                if sensor[key]['unit'] == 'inHg':
+                    conf['value_template'] = "{{ value_json." + key + "  | float | round(2) }}"
                 else:
                     conf['value_template'] = "{{ value_json." + key + "  | float | round(1) }}"
             elif topic_mode == 'individual':
                 conf['state_topic'] = self.topic + '/' + key
                 if sensor[key]['type'] == 'timestamp':
                     conf['value_template'] = "{{ value | int | as_datetime }}"
+                if sensor[key]['unit'] == 'inHg':
+                    conf['value_template'] = "{{ value_json." + key + "  | float | round(2) }}"
                 else:
                     conf['value_template'] = "{{ value | float | round(1) }}"
             conf['availability_topic'] = self.topic + '/availability' 
