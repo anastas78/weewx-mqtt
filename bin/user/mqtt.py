@@ -664,7 +664,7 @@ class MQTTThread(weewx.restx.RESTThread):
                 if sensor[key]['type'] == 'timestamp':
                     conf['value_template'] = "{{ value | int | as_datetime }}"
                 if sensor[key]['unit'] == 'inHg':
-                    conf['value_template'] = "{{ value_json." + key + "  | float | round(2) }}"
+                    conf['value_template'] = "{{ value | float | round(2) }}"
                 else:
                     conf['value_template'] = "{{ value | float | round(1) }}"
             conf['availability_topic'] = self.topic + '/availability' 
