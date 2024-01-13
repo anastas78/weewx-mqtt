@@ -191,7 +191,6 @@ UNIT_REDUCTIONS = {
     'degree_F': 'F',
     'degree_C': 'C',
     'inch': 'in',
-    'inch': 'in',
     'mile_per_hour': 'mph',
     'mile_per_hour2': 'mph',
     'km_per_hour': 'kph',
