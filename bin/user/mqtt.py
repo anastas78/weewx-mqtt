@@ -536,6 +536,7 @@ class MQTTThread(weewx.restx.RESTThread):
         self.ha_discovery = ha_discovery
         self.ha_device_name = ha_device_name
         self.ha_discovery_topic = ha_discovery_topic
+        self.ha_discovery_lastrun = 0
 
     def get_mqtt_client(self):
         if self.mc:
@@ -631,7 +632,7 @@ class MQTTThread(weewx.restx.RESTThread):
             sensor[f]['type'] = HA_SENSOR_TYPE.get(unit_type, unit_type)
             sensor[f]['unit'] = HA_SENSOR_UNIT.get(unit_type, unit_type)
         return sensor
-	
+ 
     def ha_discovery_send(self, data, sensor, topic_mode):
         if self.ha_device_name is not None:
             device_tracker = dict()
@@ -707,12 +708,21 @@ class MQTTThread(weewx.restx.RESTThread):
                     logerr("publish failed for %s: %s" %
                            (tpc, mqtt.error_string(res)))
         if self.ha_discovery:
-            if self.aggregation.find('aggregate') >= 0:
-                topic_mode = 'aggregate'
-            elif self.aggregation.find('individual') >= 0:
-                topic_mode = 'individual'
+            # Prevent HA discovery topics from being updated
+            # more often than once per minute
+            current_time = time.time()
+            sec_since_ha_discovery = current_time - self.ha_discovery_lastrun
+            time_left = 60 - sec_since_ha_discovery
+            if sec_since_ha_discovery >= 60:
+                if self.aggregation.find('aggregate') >= 0:
+                    topic_mode = 'aggregate'
+                elif self.aggregation.find('individual') >= 0:
+                    topic_mode = 'individual'
+                else:
+                    topic_mode = None
+                if topic_mode is not None:
+                    sensor = self.filter_sensor_info(data, record['usUnits'])
+                    self.ha_discovery_send(data, sensor, topic_mode)
+                    self.ha_discovery_lastrun = current_time
             else:
-                topic_mode = None
-            if topic_mode is not None:
-                sensor = self.filter_sensor_info(data, record['usUnits'])
-                self.ha_discovery_send(data, sensor, topic_mode)
+                logdbg("Next HA Dicovery in %s seconds" % time_left)
