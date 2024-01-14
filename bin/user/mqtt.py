@@ -191,7 +191,6 @@ UNIT_REDUCTIONS = {
     'degree_F': 'F',
     'degree_C': 'C',
     'inch': 'in',
-    'inch': 'in',
     'mile_per_hour': 'mph',
     'mile_per_hour2': 'mph',
     'km_per_hour': 'kph',
@@ -632,7 +631,7 @@ class MQTTThread(weewx.restx.RESTThread):
             sensor[f]['type'] = HA_SENSOR_TYPE.get(unit_type, unit_type)
             sensor[f]['unit'] = HA_SENSOR_UNIT.get(unit_type, unit_type)
         return sensor
- 
+   
     def ha_discovery_send(self, data, sensor, topic_mode):
         if self.ha_device_name is not None:
             device_tracker = dict()
