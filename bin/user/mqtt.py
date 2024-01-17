@@ -655,7 +655,7 @@ class MQTTThread(weewx.restx.RESTThread):
                 conf['state_topic'] = self.topic + '/loop'
                 if sensor[key]['type'] == 'timestamp':
                     conf['value_template'] = "{{ value_json." + key + " | int | as_datetime }}"
-                if sensor[key]['unit'] == 'inHg':
+                elif sensor[key]['unit'] == 'inHg':
                     conf['value_template'] = "{{ value_json." + key + "  | float | round(2) }}"
                 else:
                     conf['value_template'] = "{{ value_json." + key + "  | float | round(1) }}"
@@ -663,7 +663,7 @@ class MQTTThread(weewx.restx.RESTThread):
                 conf['state_topic'] = self.topic + '/' + key
                 if sensor[key]['type'] == 'timestamp':
                     conf['value_template'] = "{{ value | int | as_datetime }}"
-                if sensor[key]['unit'] == 'inHg':
+                elif sensor[key]['unit'] == 'inHg':
                     conf['value_template'] = "{{ value | float | round(2) }}"
                 else:
                     conf['value_template'] = "{{ value | float | round(1) }}"
