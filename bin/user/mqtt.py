@@ -211,7 +211,8 @@ UNIT_REDUCTIONS = {
 HA_SENSOR_TYPE = {
     'degree_F': 'temperature',
     'degree_C': 'temperature',
-    'mbar': 'pressure',	
+    'mbar': 'atmospheric_pressure',
+    'inHg': 'atmospheric_pressure',
     'inch': 'precipitation',
     'cm': 'precipitation',
     'mm': 'precipitation',
@@ -223,6 +224,7 @@ HA_SENSOR_TYPE = {
     'mile_per_hour': 'wind_speed',
     'mile_per_hour2': 'wind_speed',
     'mm_per_hour': 'precipitation_intensity',
+    'inch_per_hour': 'precipitation_intensity',
     'cm_per_hour': 'precipitation_intensity',
     'cm_per_hour2': 'precipitation_intensity',   
     'km_per_hour': 'precipitation_intensity',
@@ -253,6 +255,7 @@ HA_SENSOR_UNIT = {
     'hour': 'h',
     'mile_per_hour': 'mph',
     'mile_per_hour2': 'mph',
+    'inch_per_hour': 'in/h',
     'mm_per_hour': 'mm/h',
     'mm_per_hour2': 'mm/h',
     'cm_per_hour': 'cm/h',
@@ -532,6 +535,7 @@ class MQTTThread(weewx.restx.RESTThread):
         self.ha_discovery = ha_discovery
         self.ha_device_name = ha_device_name
         self.ha_discovery_topic = ha_discovery_topic
+        self.ha_discovery_lastrun = 0
 
     def get_mqtt_client(self):
         if self.mc:
@@ -627,7 +631,7 @@ class MQTTThread(weewx.restx.RESTThread):
             sensor[f]['type'] = HA_SENSOR_TYPE.get(unit_type, unit_type)
             sensor[f]['unit'] = HA_SENSOR_UNIT.get(unit_type, unit_type)
         return sensor
-	
+
     def ha_discovery_send(self, data, sensor, topic_mode):
         if self.ha_device_name is not None:
             device_tracker = dict()
@@ -651,12 +655,16 @@ class MQTTThread(weewx.restx.RESTThread):
                 conf['state_topic'] = self.topic + '/loop'
                 if sensor[key]['type'] == 'timestamp':
                     conf['value_template'] = "{{ value_json." + key + " | int | as_datetime }}"
+                elif sensor[key]['unit'] == 'inHg':
+                    conf['value_template'] = "{{ value_json." + key + "  | float | round(2) }}"
                 else:
                     conf['value_template'] = "{{ value_json." + key + "  | float | round(1) }}"
             elif topic_mode == 'individual':
                 conf['state_topic'] = self.topic + '/' + key
                 if sensor[key]['type'] == 'timestamp':
                     conf['value_template'] = "{{ value | int | as_datetime }}"
+                elif sensor[key]['unit'] == 'inHg':
+                    conf['value_template'] = "{{ value | float | round(2) }}"
                 else:
                     conf['value_template'] = "{{ value | float | round(1) }}"
             conf['availability_topic'] = self.topic + '/availability' 
@@ -699,12 +707,21 @@ class MQTTThread(weewx.restx.RESTThread):
                     logerr("publish failed for %s: %s" %
                            (tpc, mqtt.error_string(res)))
         if self.ha_discovery:
-            if self.aggregation.find('aggregate') >= 0:
-                topic_mode = 'aggregate'
-            elif self.aggregation.find('individual') >= 0:
-                topic_mode = 'individual'
+            # Prevent HA discovery topics from being updated
+            # more often than once per minute
+            current_time = time.time()
+            sec_since_ha_discovery = current_time - self.ha_discovery_lastrun
+            time_left = 60 - sec_since_ha_discovery
+            if sec_since_ha_discovery >= 60:
+                if self.aggregation.find('aggregate') >= 0:
+                    topic_mode = 'aggregate'
+                elif self.aggregation.find('individual') >= 0:
+                    topic_mode = 'individual'
+                else:
+                    topic_mode = None
+                if topic_mode is not None:
+                    sensor = self.filter_sensor_info(data, record['usUnits'])
+                    self.ha_discovery_send(data, sensor, topic_mode)
+                    self.ha_discovery_lastrun = current_time
             else:
-                topic_mode = None
-            if topic_mode is not None:
-                sensor = self.filter_sensor_info(data, record['usUnits'])
-                self.ha_discovery_send(data, sensor, topic_mode)
+                logdbg("Next HA Dicovery in %s seconds" % time_left)
